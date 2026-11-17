@@ -6,26 +6,25 @@ services:
     container_name: taskflow-prod-app
     restart: always
     ports:
-      - "3000:3000"
+      - "8080:8080"
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - APP_VERSION=${IMAGE_TAG:-1.0.0}
-      - JWT_SECRET=production-secure-vault-sit753-key
+      - PORT=8080
+      - SPRING_PROFILES_ACTIVE=prod
+      - JWT_SECRET=production-secret-key-sit753-that-is-over-256-bits-long
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 15s
     deploy:
       resources:
         limits:
-          cpus: '0.75'
-          memory: 512M
+          cpus: '1.0'
+          memory: 768M
         reservations:
           cpus: '0.25'
-          memory: 128M
+          memory: 256M
     networks:
       - taskflow-network
 

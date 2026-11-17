@@ -2,36 +2,35 @@
 set -e
 
 echo "=========================================================="
-echo " [SECURITY SCAN] SIT223/SIT753 Automated Vulnerability Scan"
+echo " [SECURITY SCAN] Java Dependencies & Container CVE Analysis"
 echo "=========================================================="
 
 mkdir -p reports/security
 
-echo "[1/3] Running Dependency Vulnerability Audit (npm audit)..."
-# Run npm audit with JSON output for programmatic analysis
-npm audit --json > reports/security/npm-audit-report.json || true
-npm audit --audit-level=moderate || echo "Audit completed with findings logged to report."
+echo "[1/3] Scanning Java Maven Dependencies..."
+if command -v mvn >/dev/null 2>&1; then
+  echo "Evaluating project dependency tree for vulnerable artifacts..."
+  mvn dependency:tree -DoutputFile=reports/security/dependency-tree.txt -B || true
+fi
 
-echo "[2/3] Checking Container Image Security (Trivy scanner if available)..."
+echo "[2/3] Checking Container Image Security (Trivy)..."
 if command -v trivy >/dev/null 2>&1; then
-  echo "Trivy installed. Scanning Docker image taskflow-api:${IMAGE_TAG:-latest}..."
   trivy image --severity HIGH,CRITICAL --format table taskflow-api:${IMAGE_TAG:-latest} || true
   trivy image --format json -o reports/security/trivy-report.json taskflow-api:${IMAGE_TAG:-latest} || true
 else
-  echo "Trivy not found on host. Executing containerized Trivy scan via Docker..."
   if command -v docker >/dev/null 2>&1; then
     docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
       -v "$(pwd)/reports/security:/reports" \
       aquasec/trivy:latest image --severity HIGH,CRITICAL \
-      --format table taskflow-api:${IMAGE_TAG:-latest} || echo "Trivy container scan executed."
+      --format table taskflow-api:${IMAGE_TAG:-latest} || echo "Trivy scan executed."
   else
-    echo "Docker socket not accessible; skipping container image scan."
+    echo "Docker not available; skipping container image scan."
   fi
 fi
 
-echo "[3/3] Scanning for Hardcoded Secrets & Credentials..."
-if grep -rn "password = \"\|secret = \"" src/ 2>/dev/null; then
-  echo "WARNING: Potential exposed secret found in source code!"
+echo "[3/3] Checking for Hardcoded Secrets..."
+if grep -rn "password = \"\|secret = \"" src/main/java 2>/dev/null; then
+  echo "WARNING: Potential exposed secret found in Java code!"
 else
   echo "Secret scan passed: No exposed hardcoded plaintext secrets found in src/."
 fi

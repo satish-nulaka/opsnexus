@@ -1,0 +1,30 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: taskflow-api
+
+# Spring Boot Actuator Configuration for DevOps Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# Application Security Configuration
+app:
+  jwt:
+    secret: ${JWT_SECRET:sit753devopspipelinesupersecretkeythatislongerthan256bitsforhs256validation2026}
+    expiration-ms: 86400000 # 24 hours

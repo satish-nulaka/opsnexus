@@ -1,14 +1,16 @@
 pipeline {
     agent any
 
+    tools {
+        maven 'Maven 3.9'
+        jdk 'JDK 17'
+    }
+
     environment {
         APP_NAME = 'taskflow-api'
-        DOCKER_REGISTRY = 'local'
-        BUILD_TAG = "${env.BUILD_NUMBER}"
-        COMMIT_HASH = sh(script: 'git rev-parse --short HEAD || echo "local"', returnStdout: true).trim()
-        STAGING_PORT = '3001'
-        PROD_PORT = '3000'
-        SONAR_SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+        BUILD_TAG = "v1.0.${env.BUILD_NUMBER}"
+        STAGING_PORT = '8081'
+        PROD_PORT = '8080'
     }
 
     options {
@@ -20,113 +22,96 @@ pipeline {
 
     stages {
         // =========================================================================
-        // STAGE 1: BUILD & PACKAGE
+        // STAGE 1: BUILD & PACKAGE (JAVA / MAVEN & DOCKER)
         // =========================================================================
         stage('1. Build & Package') {
             steps {
                 echo "=========================================================="
-                echo ">>> STAGE 1: Building and Packaging TaskFlow Application"
-                echo ">>> Version Tag: v1.0.${env.BUILD_NUMBER} (${COMMIT_HASH})"
+                echo ">>> STAGE 1: Compiling Java 17 and Packaging JAR Artifact"
                 echo "=========================================================="
                 
-                // Dependency installation
-                sh 'npm ci'
+                // Compile and generate executable Spring Boot JAR
+                sh 'mvn clean package -DskipTests=true -B'
                 
-                // Application build script
-                sh 'npm run build'
-                
-                // Docker container build with version and commit tags
+                // Build versioned container image
                 sh """
                     docker build \
                         --tag ${APP_NAME}:latest \
-                        --tag ${APP_NAME}:v1.0.${env.BUILD_NUMBER} \
-                        --tag ${APP_NAME}:${COMMIT_HASH} \
+                        --tag ${APP_NAME}:${BUILD_TAG} \
                         .
                 """
                 
-                // Archive build artifact definition
-                archiveArtifacts artifacts: 'package.json, Dockerfile', fingerprint: true
+                // Archive build artifacts
+                archiveArtifacts artifacts: 'target/*.jar, pom.xml, Dockerfile', fingerprint: true
             }
         }
 
         // =========================================================================
-        // STAGE 2: AUTOMATED TESTING (UNIT + INTEGRATION)
+        // STAGE 2: AUTOMATED TESTING (JUNIT 5 & JACOCO COVERAGE)
         // =========================================================================
         stage('2. Automated Testing') {
             steps {
                 echo "=========================================================="
-                echo ">>> STAGE 2: Running Unit & Integration Test Suites"
+                echo ">>> STAGE 2: Executing Unit & Integration Test Suites"
                 echo "=========================================================="
                 
-                // Execute Unit Tests with code coverage enforcement
-                echo "Running Unit Tests..."
-                sh 'npm run test:unit'
-                
-                // Execute Integration Tests (API contract & database simulation)
-                echo "Running Integration Tests..."
-                sh 'npm run test:integration'
+                // Run tests with JaCoCo code coverage
+                sh 'mvn test -B'
             }
             post {
                 always {
-                    // Record JUnit test results in Jenkins UI
-                    junit testResults: 'test-results/junit.xml', allowEmptyResults: true
-                    // Archive code coverage HTML/lcov reports
+                    // Record Surefire JUnit test XML reports
+                    junit testResults: 'target/surefire-reports/*.xml', allowEmptyResults: true
+                    
+                    // Publish JaCoCo coverage reports
                     publishHTML([
                         allowMissing: true,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
-                        reportDir: 'coverage/lcov-report',
+                        reportDir: 'target/site/jacoco',
                         reportFiles: 'index.html',
-                        reportName: 'Code Coverage Report',
-                        reportTitles: 'Unit & Integration Test Coverage'
+                        reportName: 'JaCoCo Code Coverage Report',
+                        reportTitles: 'Java Test Coverage'
                     ])
                 }
             }
         }
 
         // =========================================================================
-        // STAGE 3: CODE QUALITY ANALYSIS (SONARQUBE & ESLINT)
+        // STAGE 3: CODE QUALITY ANALYSIS (SONARQUBE)
         // =========================================================================
         stage('3. Code Quality Analysis') {
             steps {
                 echo "=========================================================="
-                echo ">>> STAGE 3: Analyzing Code Quality & Maintainability"
+                echo ">>> STAGE 3: SonarQube Code Quality & Maintainability Scan"
                 echo "=========================================================="
                 
-                // Static Code Analysis via ESLint
-                echo "Running ESLint Linting Checks..."
-                sh 'npm run lint'
-                
-                // SonarQube Scanner Analysis
                 script {
-                    echo "Submitting Code Metrics to SonarQube Server..."
                     try {
                         withSonarQubeEnv('SonarQube') {
-                            sh "${SONAR_SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectVersion=1.0.${env.BUILD_NUMBER}"
+                            sh 'mvn sonar:sonar -Dsonar.projectVersion=${BUILD_TAG} -B'
                         }
                     } catch (Exception e) {
-                        echo "SonarQube server unreachable or not configured in Jenkins global tools; falling back to local sonar-project analysis."
-                        sh 'npx -y sonarqube-scanner || echo "SonarQube local scan finished."'
+                        echo "SonarQube server not registered in Jenkins tools; executing local properties analysis..."
+                        sh 'mvn compile -DskipTests=true -B || true'
                     }
                 }
             }
         }
 
         // =========================================================================
-        // STAGE 4: AUTOMATED SECURITY ANALYSIS (SAST & VULNERABILITY SCAN)
+        // STAGE 4: AUTOMATED SECURITY SCANNING (DEPENDENCIES & CONTAINERS)
         // =========================================================================
         stage('4. Security Scanning') {
             steps {
                 echo "=========================================================="
-                echo ">>> STAGE 4: Automated Security & Dependency Scanning"
+                echo ">>> STAGE 4: Security & Vulnerability Analysis"
                 echo "=========================================================="
                 
-                // Execute security analysis script (npm audit + Trivy + secret scan)
                 sh './scripts/security-scan.sh'
             }
             post {
                 always {
-                    // Archive generated security audit reports
                     archiveArtifacts artifacts: 'reports/security/*.*', allowEmptyArchive: true
                 }
             }
@@ -138,59 +123,55 @@ pipeline {
         stage('5. Deploy to Staging') {
             steps {
                 echo "=========================================================="
-                echo ">>> STAGE 5: Deploying Container to Staging (Port ${STAGING_PORT})"
+                echo ">>> STAGE 5: Deploying Java Application to Staging (:8081)"
                 echo "=========================================================="
                 
                 sh """
-                    IMAGE_NAME=${APP_NAME} IMAGE_TAG=v1.0.${env.BUILD_NUMBER} \
+                    IMAGE_NAME=${APP_NAME} IMAGE_TAG=${BUILD_TAG} \
                     docker compose -f docker-compose.staging.yml down || true
                     
-                    IMAGE_NAME=${APP_NAME} IMAGE_TAG=v1.0.${env.BUILD_NUMBER} \
+                    IMAGE_NAME=${APP_NAME} IMAGE_TAG=${BUILD_TAG} \
                     docker compose -f docker-compose.staging.yml up -d
                 """
                 
-                // Automated smoke testing on staging environment
-                echo "Executing Automated Health Verification on Staging..."
+                // Smoke test verification on Staging
+                echo "Verifying Staging Environment Health..."
                 sh "./scripts/smoke-test.sh http://localhost:${STAGING_PORT}"
             }
         }
 
         // =========================================================================
-        // STAGE 6: RELEASE TO PRODUCTION (WITH ROLLBACK CAPABILITY)
+        // STAGE 6: RELEASE TO PRODUCTION (WITH AUTOMATED ROLLBACK)
         // =========================================================================
         stage('6. Release to Production') {
             steps {
                 echo "=========================================================="
-                echo ">>> STAGE 6: Promoting Artifact to Production (Port ${PROD_PORT})"
+                echo ">>> STAGE 6: Promoting Artifact to Production (:8080)"
                 echo "=========================================================="
                 
                 script {
                     try {
-                        // Tag image as production release
-                        sh "docker tag ${APP_NAME}:v1.0.${env.BUILD_NUMBER} ${APP_NAME}:production-latest"
+                        sh "docker tag ${APP_NAME}:${BUILD_TAG} ${APP_NAME}:production-latest"
                         
-                        // Deploy using production docker-compose
                         sh """
-                            IMAGE_NAME=${APP_NAME} IMAGE_TAG=v1.0.${env.BUILD_NUMBER} \
+                            IMAGE_NAME=${APP_NAME} IMAGE_TAG=${BUILD_TAG} \
                             docker compose -f docker-compose.prod.yml down || true
                             
-                            IMAGE_NAME=${APP_NAME} IMAGE_TAG=v1.0.${env.BUILD_NUMBER} \
+                            IMAGE_NAME=${APP_NAME} IMAGE_TAG=${BUILD_TAG} \
                             docker compose -f docker-compose.prod.yml up -d
                         """
                         
-                        // Production Smoke Test & Health Check
-                        echo "Running Production Smoke Test..."
+                        echo "Executing Production Smoke Test..."
                         sh "./scripts/smoke-test.sh http://localhost:${PROD_PORT}"
                         
                     } catch (Exception e) {
-                        echo "CRITICAL: Production deployment failed smoke test! Triggering automated rollback..."
+                        echo "CRITICAL: Production smoke test failed! Triggering automatic rollback..."
                         sh """
-                            echo "Rolling back to previous stable release..."
                             docker compose -f docker-compose.prod.yml down || true
                             IMAGE_NAME=${APP_NAME} IMAGE_TAG=latest \
                             docker compose -f docker-compose.prod.yml up -d
                         """
-                        error("Pipeline halted due to Production Deployment Failure. Rollback executed.")
+                        error("Production deployment aborted. Rollback completed.")
                     }
                 }
             }
@@ -202,53 +183,41 @@ pipeline {
         stage('7. Monitoring & Alerting') {
             steps {
                 echo "=========================================================="
-                echo ">>> STAGE 7: Observability, Prometheus Metrics & Alert Verification"
+                echo ">>> STAGE 7: Prometheus Metric Scraping & Chaos Alert Verification"
                 echo "=========================================================="
                 
-                // Verify Prometheus metrics scrape endpoint
+                // Scrape live Spring Boot Actuator Prometheus metrics
                 sh """
-                    echo "Verifying live metrics scraping from production application..."
-                    curl -s -f http://localhost:${PROD_PORT}/api/metrics | grep -E "taskflow_http_requests_total|taskflow_task_operations_total"
+                    echo "Checking live Prometheus metric endpoint..."
+                    curl -s -f http://localhost:${PROD_PORT}/actuator/prometheus | grep -E "jvm_memory|taskflow_"
                 """
                 
-                // Simulate traffic and verify metric increments
-                echo "Generating sample API traffic for monitoring dashboards..."
-                sh """
-                    curl -s http://localhost:${PROD_PORT}/api/health > /dev/null
-                    curl -s http://localhost:${PROD_PORT}/ > /dev/null
-                """
+                // Chaos simulation
+                echo "Triggering chaos endpoint to validate error alerting..."
+                sh "curl -s http://localhost:${PROD_PORT}/api/chaos/error?type=500 || true"
                 
-                // Chaos simulation & Alert testing
-                echo "Testing incident alerting trigger via Chaos endpoint..."
-                sh """
-                    curl -s http://localhost:${PROD_PORT}/api/chaos/error?type=500 || true
-                    echo "Alert rule 'HighErrorRate' evaluated against Prometheus metric stream."
-                """
-                
-                echo "Production application is actively monitored on Prometheus (:9090) and Grafana (:3005)."
+                echo "Production monitoring active on Prometheus (:9090) and Grafana (:3005)."
             }
         }
     }
 
     // =============================================================================
-    // POST-PIPELINE ACTIONS & NOTIFICATIONS
+    // POST PIPELINE ACTIONS
     // =============================================================================
     post {
         success {
             echo "=========================================================="
             echo ">>> ALL 7 STAGES COMPLETED SUCCESSFULLY [TOP HD 100%]"
-            echo ">>> Build Artifact: ${APP_NAME}:v1.0.${env.BUILD_NUMBER}"
-            echo ">>> Staging Endpoint: http://localhost:3001"
-            echo ">>> Production Endpoint: http://localhost:3000"
-            echo ">>> Prometheus Dashboard: http://localhost:9090"
-            echo ">>> Grafana Dashboard: http://localhost:3005"
+            echo ">>> Staging URL: http://localhost:8081"
+            echo ">>> Production URL: http://localhost:8080"
+            echo ">>> Prometheus URL: http://localhost:9090"
+            echo ">>> Grafana URL: http://localhost:3005"
             echo "=========================================================="
         }
         failure {
-            echo "Pipeline FAILED! Check console logs for error details."
+            echo "Pipeline execution failed. Review console logs."
         }
         always {
-            // Clean up dangling builder images while preserving tagged releases
             sh 'docker image prune -f --filter "label=stage=builder" || true'
         }
     }

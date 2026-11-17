@@ -6,18 +6,17 @@ services:
     container_name: taskflow-staging-app
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "8081:8080"
     environment:
-      - NODE_ENV=staging
-      - PORT=3000
-      - APP_VERSION=${IMAGE_TAG:-staging}
-      - JWT_SECRET=staging-secret-key-sit753
+      - PORT=8080
+      - SPRING_PROFILES_ACTIVE=staging
+      - JWT_SECRET=staging-secret-key-sit753-that-is-over-256-bits-long
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 15s
     networks:
       - taskflow-network
 

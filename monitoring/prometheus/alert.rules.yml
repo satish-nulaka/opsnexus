@@ -1,5 +1,5 @@
 groups:
-  - name: taskflow_alerts
+  - name: taskflow_java_alerts
     rules:
       - alert: ServiceDown
         expr: up{job="taskflow-production"} == 0
@@ -8,22 +8,22 @@ groups:
           severity: critical
         annotations:
           summary: "TaskFlow Production Service is Down"
-          description: "Production instance on port 3000 has been unreachable for more than 15 seconds."
+          description: "Production instance on port 8080 is unreachable."
 
       - alert: HighErrorRate
-        expr: rate(taskflow_http_requests_total{status_code=~"5.."}[1m]) > 0.05
+        expr: rate(http_server_requests_seconds_count{status=~"5.."}[1m]) > 0.05
         for: 10s
         labels:
           severity: warning
         annotations:
           summary: "High HTTP 5xx Error Rate Detected"
-          description: "TaskFlow API error rate exceeded 5% over the last minute."
+          description: "Error rate exceeded 5% on Spring Boot API."
 
-      - alert: HighLatency
-        expr: histogram_quantile(0.95, sum(rate(taskflow_http_request_duration_seconds_bucket[1m])) by (le)) > 1.5
-        for: 15s
+      - alert: HighJvmHeapUsage
+        expr: (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) > 0.85
+        for: 30s
         labels:
           severity: warning
         annotations:
-          summary: "High P95 Latency Detected"
-          description: "95th percentile request latency is above 1.5 seconds."
+          summary: "High JVM Heap Utilization"
+          description: "JVM Heap usage exceeded 85%."

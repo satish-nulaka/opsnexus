@@ -1,49 +1,41 @@
-# Multi-stage production-grade Dockerfile for TaskFlow API
-# Stage 1: Dependencies & Build
-FROM node:20-alpine AS builder
+# Multi-stage production-grade Dockerfile for Java Spring Boot TaskFlow API
+# Stage 1: Build & Package with Maven
+FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
-RUN npm ci
+COPY pom.xml ./
+# Cache Maven dependencies
+RUN mvn dependency:go-offline -B || true
 
-COPY . .
+COPY src/ ./src/
+RUN mvn clean package -DskipTests=true -B
 
-# Run linting and tests during container validation build
-RUN npm run lint
-RUN npm run test:unit
+# Stage 2: Minimal, secure JRE 17 Production Image
+FROM eclipse-temurin:17-jre-alpine AS production
 
-# Stage 2: Minimal Production Image
-FROM node:20-alpine AS production
-
-LABEL maintainer="Deakin University SIT223/SIT753 DevOps Team"
-LABEL description="TaskFlow API Production Container"
+LABEL maintainer="TaskFlow DevOps Engineering Team"
+LABEL description="TaskFlow API Java Spring Boot Microservice"
 LABEL version="1.0.0"
 
-ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
+ENV SPRING_PROFILES_ACTIVE=production
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# Install dumb-init to properly forward signals to Node.js
-RUN apk add --no-cache dumb-init curl
+# Install curl for container health check
+RUN apk add --no-cache curl
 
-# Copy dependency definitions and install production-only dependencies
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+# Run as non-privileged user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser:appgroup
 
-# Copy application source code
-COPY --chown=node:node src/ ./src/
+# Copy built JAR artifact from builder stage
+COPY --from=builder --chown=appuser:appgroup /usr/src/app/target/taskflow-api-1.0.0.jar app.jar
 
-# Security best practice: Run as unprivileged user
-USER node
+EXPOSE 8080
 
-# Expose HTTP port
-EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
 
-# Container healthcheck probe
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
-
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["node", "src/server.js"]
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]

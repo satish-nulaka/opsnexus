@@ -11,11 +11,11 @@ scrape_configs:
       - targets: ['localhost:9090']
 
   - job_name: 'taskflow-production'
-    metrics_path: '/api/metrics'
+    metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:3000', 'taskflow-prod-app:3000']
+      - targets: ['host.docker.internal:8080', 'taskflow-prod-app:8080']
 
   - job_name: 'taskflow-staging'
-    metrics_path: '/api/metrics'
+    metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:3001', 'taskflow-staging-app:3000']
+      - targets: ['host.docker.internal:8081', 'taskflow-staging-app:8080']
