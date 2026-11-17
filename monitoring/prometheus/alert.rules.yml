@@ -1,0 +1,29 @@
+groups:
+  - name: taskflow_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up{job="taskflow-production"} == 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: "TaskFlow Production Service is Down"
+          description: "Production instance on port 3000 has been unreachable for more than 15 seconds."
+
+      - alert: HighErrorRate
+        expr: rate(taskflow_http_requests_total{status_code=~"5.."}[1m]) > 0.05
+        for: 10s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP 5xx Error Rate Detected"
+          description: "TaskFlow API error rate exceeded 5% over the last minute."
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum(rate(taskflow_http_request_duration_seconds_bucket[1m])) by (le)) > 1.5
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P95 Latency Detected"
+          description: "95th percentile request latency is above 1.5 seconds."
