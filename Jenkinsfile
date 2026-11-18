@@ -6,6 +6,7 @@ pipeline {
         BUILD_TAG = "v1.0.${env.BUILD_NUMBER}"
         STAGING_PORT = '8081'
         PROD_PORT = '8080'
+        TARGET_HOST = 'host.docker.internal'
     }
 
     options {
@@ -114,6 +115,7 @@ pipeline {
                     docker rm -f opsnexus-staging-app || true
                     docker run -d \
                         --name opsnexus-staging-app \
+                        --network sit753-devops-pipeline_taskflow-network \
                         -p ${STAGING_PORT}:8080 \
                         -e PORT=8080 \
                         -e SPRING_PROFILES_ACTIVE=staging \
@@ -123,7 +125,7 @@ pipeline {
                 """
                 
                 echo "Verifying Staging Environment Health..."
-                sh "./scripts/smoke-test.sh http://localhost:${STAGING_PORT}"
+                sh "./scripts/smoke-test.sh http://${TARGET_HOST}:${STAGING_PORT} http://opsnexus-staging-app:8080"
             }
         }
 
@@ -144,6 +146,7 @@ pipeline {
                             docker rm -f opsnexus-prod-app || true
                             docker run -d \
                                 --name opsnexus-prod-app \
+                                --network sit753-devops-pipeline_taskflow-network \
                                 -p ${PROD_PORT}:8080 \
                                 -e PORT=8080 \
                                 -e SPRING_PROFILES_ACTIVE=prod \
@@ -153,7 +156,7 @@ pipeline {
                         """
                         
                         echo "Executing Production Smoke Test..."
-                        sh "./scripts/smoke-test.sh http://localhost:${PROD_PORT}"
+                        sh "./scripts/smoke-test.sh http://${TARGET_HOST}:${PROD_PORT} http://opsnexus-prod-app:8080"
                         
                     } catch (Exception e) {
                         echo "CRITICAL: Production smoke test failed! Triggering automatic rollback..."
@@ -161,6 +164,7 @@ pipeline {
                             docker rm -f opsnexus-prod-app || true
                             docker run -d \
                                 --name opsnexus-prod-app \
+                                --network sit753-devops-pipeline_taskflow-network \
                                 -p ${PROD_PORT}:8080 \
                                 -e PORT=8080 \
                                 -e SPRING_PROFILES_ACTIVE=prod \
@@ -184,11 +188,15 @@ pipeline {
                 
                 sh """
                     echo "Checking live Prometheus metric endpoint..."
-                    curl -s -f http://localhost:${PROD_PORT}/actuator/prometheus | grep -E "jvm_memory|opsnexus_"
+                    curl -s -f http://${TARGET_HOST}:${PROD_PORT}/actuator/prometheus | grep -E "jvm_memory|opsnexus_" | head -n 20 || \
+                    curl -s -f http://opsnexus-prod-app:8080/actuator/prometheus | grep -E "jvm_memory|opsnexus_" | head -n 20
                 """
                 
                 echo "Triggering chaos endpoint to validate error alerting..."
-                sh "curl -s http://localhost:${PROD_PORT}/api/chaos/error?type=500 || true"
+                sh """
+                    curl -s http://${TARGET_HOST}:${PROD_PORT}/api/chaos/error?type=500 || \
+                    curl -s http://opsnexus-prod-app:8080/api/chaos/error?type=500 || true
+                """
                 
                 echo "Production monitoring active on Prometheus (:9090) and Grafana (:3005)."
             }

@@ -1,13 +1,13 @@
 groups:
-  - name: taskflow_java_alerts
+  - name: opsnexus_java_alerts
     rules:
       - alert: ServiceDown
-        expr: up{job="taskflow-production"} == 0
+        expr: up{job="opsnexus-production"} == 0
         for: 15s
         labels:
           severity: critical
         annotations:
-          summary: "TaskFlow Production Service is Down"
+          summary: "OpsNexus Production Service is Down"
           description: "Production instance on port 8080 is unreachable."
 
       - alert: HighErrorRate
