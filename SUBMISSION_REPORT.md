@@ -1,111 +1,107 @@
 # DevOps Pipeline Implementation Report: Java Microservice with Jenkins
+## Enterprise CI/CD Pipeline Automation for OpsNexus API
 
 ---
 
 ### Project & Submission Summary
-* **Project Name:** TaskFlow REST API (Java Spring Boot Microservice)
-* **Pipeline Orchestrator:** Jenkins LTS (Declarative Pipeline)
-* **Total Stages Implemented:** **7 Distinct Stages** (Build, Test, Code Quality, Security, Staging Deploy, Production Release, Monitoring & Alerting)
-* **Repository Link:** `https://github.com/[your-username]/sit753-devops-pipeline`
+* **Project Name:** OpsNexus REST API (Enterprise Java Spring Boot Microservice)
+* **Application Technology:** Java 23 (Eclipse Temurin 23), Spring Boot 3.3.4, Spring Security, Springdoc OpenAPI Swagger
+* **Pipeline Orchestrator:** Jenkins LTS (Declarative Pipeline with Docker-in-Docker Execution)
+* **Total Stages Implemented:** **7 Distinct Stages** (Build & Package, Automated Testing, Code Quality Analysis, Security Scanning, Staging Deploy, Production Release with Rollback, Monitoring & Alerting)
+* **Repository Link:** `https://github.com/satish-nulaka/opsnexus`
 * **Demo Video Link:** `https://youtu.be/[your-video-id]` (Duration: ≤ 10 minutes)
 
 ---
 
 ## 1. System Architecture & Project Description
 
-TaskFlow API is an enterprise-grade task and workflow management RESTful service built with **Java 17** and **Spring Boot 3**. It provides functional depth through:
-* **Stateless Token Authentication:** JSON Web Token (JWT) handling via JJWT and Spring Security, with password salting and BCrypt hashing.
-* **Task Management Lifecycle:** Full CRUD operations with Jakarta Bean validation (`@NotBlank`, `@Size`) and thread-safe persistence.
-* **Built-in Observability:** Spring Boot Actuator exposing `/actuator/health` and `/actuator/prometheus` metrics (JVM memory, GC activity, request latency, custom task counters).
-* **Chaos Testing Endpoint:** `/api/chaos/error` endpoint allowing synthetic 500 errors and latency spikes for alert verification.
+**OpsNexus API** is an enterprise-grade task and workflow management RESTful microservice built with **Java 23** and **Spring Boot 3.3.4**. It delivers production-grade architecture through:
 
-### Pipeline Topology Diagram
+1. **Stateless Token Authentication:** JSON Web Token (JWT) handling via JJWT (`io.jsonwebtoken:jjwt-api:0.12.5`) and Spring Security with stateless session management and cryptographic HMAC-SHA256 signature validation.
+2. **RESTful Task Lifecycle:** Full CRUD operations on task resources with Jakarta Bean validation (`@NotBlank`, `@Size`) and thread-safe persistence.
+3. **Interactive Documentation:** Springdoc OpenAPI 2.6.0 exposing interactive Swagger UI at `/swagger-ui.html`.
+4. **Deep Observability:** Spring Boot Actuator exposing `/actuator/health` (liveness and readiness probes) and `/actuator/prometheus` (JVM memory pools, garbage collection metrics, HTTP request latency, custom operation counters).
+5. **Chaos Engineering & Resilience:** `/api/chaos/error` endpoint allowing synthetic 500 errors and latency injection to validate alert routing and system telemetry.
+
+### Architectural Pipeline Topology
 
 ```mermaid
 flowchart LR
-    subgraph CI["Continuous Integration"]
-        S1["1. Build & Package\n(Maven & Docker)"] --> S2["2. Automated Tests\n(JUnit 5 & JaCoCo)"]
+    subgraph CI["Continuous Integration (Jenkins)"]
+        S1["1. Build & Package\n(Java 23 + Docker)"] --> S2["2. Automated Tests\n(JUnit 5 & JaCoCo)"]
         S2 --> S3["3. Code Quality\n(SonarQube)"]
-        S3 --> S4["4. Security Scan\n(Trivy & Dependencies)"]
+        S3 --> S4["4. Security Scan\n(Trivy & Secrets)"]
     end
 
-    subgraph CD["Continuous Delivery"]
-        S4 --> S5["5. Deploy Staging\n(Port :8081)"]
+    subgraph CD["Continuous Delivery (Docker Engine)"]
+        S4 --> S5["5. Deploy Staging\n(Port :8081 + Smoke Test)"]
         S5 --> S6["6. Release Prod\n(Port :8080 + Rollback)"]
     end
 
-    subgraph Monitoring["Observability"]
-        S6 --> S7["7. Metrics & Alerts\n(Prometheus :9090)"]
+    subgraph Observability["Live Monitoring & Alerting"]
+        S6 --> S7["7. Telemetry & Chaos\n(Prometheus :9090 & Grafana :3005)"]
     end
 ```
 
 ---
 
-## 2. Details of the 7 Pipeline Stages
+## 2. Details of the 7 Automated Pipeline Stages
 
 ### Stage 1: Build & Package
-* **Goal:** Compile Java source code into an executable JAR and assemble a multi-stage Docker image.
-* **Tools:** Java 17, Apache Maven 3.9, Docker.
-* **Details:** Executes `mvn clean package -DskipTests=true` to produce `taskflow-api-1.0.0.jar`. Builds a Docker image using Alpine Linux and non-root user `appuser`, tagged with the semantic build number (`v1.0.${BUILD_NUMBER}`).
+* **Objective:** Compile Java 23 source code, run integration packaging, and produce immutable container images.
+* **Tools Used:** Apache Maven 3.9, Eclipse Temurin 23 JDK, Docker Multi-Stage Build.
+* **Implementation:** The pipeline builds the container image using a multi-stage Dockerfile (`maven:3.9.9-eclipse-temurin-23-alpine` for compilation and `eclipse-temurin:23-jre-alpine` for the runtime). Tags the image with both `:latest` and a unique semantic build tag (`:v1.0.${BUILD_NUMBER}`). Extracts the generated JAR artifact and archives it in Jenkins for auditability.
 
 ### Stage 2: Automated Testing
-* **Goal:** Execute unit and integration tests with coverage verification before deployment.
-* **Tools:** JUnit 5 (Jupiter), Spring Boot Test (MockMvc), JaCoCo.
-* **Details:** Runs `mvn test`. Tests cover cryptographic token validation, password hashing, and end-to-end HTTP request flows. Generates Surefire XML test reports parsed natively by Jenkins and enforces a 70% line coverage threshold via JaCoCo.
+* **Objective:** Verify software correctness, cryptographic security properties, and functional API contracts.
+* **Tools Used:** JUnit 5 (Jupiter), AssertJ, Spring MockMvc, Surefire Plugin.
+* **Implementation:** Automated tests execute unit and integration test suites covering JWT generation and verification, user authentication, and task CRUD operations. Generates Surefire XML test reports parsed natively by Jenkins and ensures zero failing tests before progressing.
 
 ### Stage 3: Code Quality Analysis
-* **Goal:** Ensure structural maintainability, detect code smells, and prevent technical debt.
-* **Tools:** SonarQube Scanner, `sonar-project.properties`.
-* **Details:** Analyzes source classes, test coverage XML, and cyclomatic complexity. Metrics and quality gates are evaluated on the SonarQube server.
+* **Objective:** Enforce static analysis standards, maintainability ratings, and verify quality gates.
+* **Tools Used:** SonarQube Scanner (`sonar-project.properties`), SonarQube Server (`:9000`).
+* **Implementation:** Scans the codebase for code smells, bugs, security hotspots, and duplication. Reports are transmitted to the local SonarQube instance to enforce quality gate compliance.
 
 ### Stage 4: Automated Security Analysis
-* **Goal:** Detect CVEs in third-party libraries, container layers, and scan for hardcoded credentials.
-* **Tools:** Maven Dependency Tree, Trivy Container Scanner, Secret scanning regex.
-* **Details:** Executes `scripts/security-scan.sh`. Scans dependencies for known security advisories, evaluates the Docker image for High/Critical CVEs using Trivy, and archives reports in Jenkins.
+* **Objective:** Detect vulnerabilities across third-party dependencies, container base image layers, and repository secrets.
+* **Tools Used:** Aqua Security Trivy, Maven Dependency Tree, Regex secret inspection.
+* **Implementation:** Runs `./scripts/security-scan.sh`. Inspects the dependency tree, scans the container image with Trivy for High and Critical CVEs, verifies that no plaintext credentials or hardcoded keys exist in source code, and archives the resulting security reports.
 
-### Stage 5: Deploy to Staging Environment
-* **Goal:** Validate deployment in an isolated environment mirroring production.
-* **Tools:** Docker Compose (`docker-compose.staging.yml`), Bash automated health probe.
-* **Details:** Launches the container on port `8081`. Runs `scripts/smoke-test.sh http://localhost:8081` to verify the `/actuator/health` probe returns `{"status":"UP"}` with retry logic.
+### Stage 5: Deploy to Test / Staging Environment
+* **Objective:** Deploy verified build to an isolated pre-production staging environment and validate operational readiness.
+* **Tools Used:** Docker Engine, Docker Bridge Network, Bash automated health probe.
+* **Implementation:** Launches container `opsnexus-staging-app` on port `8081` with profile `staging`. Executes `./scripts/smoke-test.sh` with automated exponential backoff and retry logic probing `/actuator/health` until the service reports `UP`.
 
-### Stage 6: Release to Production (with Rollback Support)
-* **Goal:** Promote verified artifacts to production with zero-downtime health verification and automatic fallback.
-* **Tools:** Docker Compose (`docker-compose.prod.yml`), Docker image tagging.
-* **Details:** Deploys container to port `8080` with CPU (1.0) and memory (768MB) limits. Executes automated smoke tests; if health verification fails after 15 attempts, the pipeline executes an automated rollback to the last stable release (`taskflow-api:latest`).
+### Stage 6: Release to Production (with Automated Rollback)
+* **Objective:** Promote verified release candidate to the production environment on port `8080` with automatic recovery upon failure.
+* **Tools Used:** Docker Engine, Docker Bridge Network, Jenkins Pipeline `try-catch` recovery blocks.
+* **Implementation:** Promotes the image tag to `opsnexus-api:production-latest` and runs container `opsnexus-prod-app` on port `8080`. Executes production smoke tests against `/actuator/health`. If health verification fails after 20 attempts, the pipeline automatically catches the exception, terminates the unhealthy container, and rolls back to the last stable release (`opsnexus-api:latest`).
 
 ### Stage 7: Monitoring & Alerting Integration
-* **Goal:** Verify that production observability is active and validate alerting under failure conditions.
-* **Tools:** Micrometer, Prometheus (`:9090`), Grafana (`:3005`).
-* **Details:** Scrapes `/actuator/prometheus` to confirm metrics are streaming. Calls `/api/chaos/error?type=500` to simulate an incident and verifies that Prometheus evaluates the `HighErrorRate` and `ServiceDown` alert rules.
+* **Objective:** Validate real-time production telemetry and prove alert triggers during simulated incidents.
+* **Tools Used:** Micrometer Prometheus exporter, Prometheus Server (`:9090`), Grafana (`:3005`).
+* **Implementation:** Verifies that Prometheus is actively scraping JVM memory and request latency metrics from `http://localhost:8080/actuator/prometheus`. Simulates an incident by querying `/api/chaos/error?type=500` and validates that Prometheus alert rules (`HighErrorRate`, `ServiceDown`) trigger warning and critical alerts.
 
 ---
 
-## 3. Security Vulnerability Assessment & Mitigation
+## 3. Security Vulnerability Assessment & Mitigation Matrix
 
-| Vulnerability / Risk | Severity | Target Area | Description | Remediation Implemented |
+| Vulnerability / Risk | Severity | Target Component | Threat Description | Remediation Implemented |
 | :--- | :--- | :--- | :--- | :--- |
-| **Insecure Key Verification** | High | JJWT Library | Old JWT implementations allowed algorithm confusion attacks (e.g. `none` algorithm). | Standardized on `io.jsonwebtoken:jjwt-api:0.12.5` using strict HMAC-SHA256 signature verification. |
-| **Spring Framework Vulnerabilities** | High | Spring Web | Outdated Spring Boot versions contain route parsing and security bypass vulnerabilities. | Upgraded to Spring Boot 3.2.3 and Java 17 LTS with modern security filters. |
-| **Container Root Execution** | Medium | Docker Runtime | Running containers as `root` increases risk if a container breakout occurs. | Configured Dockerfile to run under unprivileged user `appuser:appgroup` with minimal Alpine base. |
-| **Credential Leakage** | Critical | Repository Code | Committing passwords or secret keys directly in Git repositories. | Externalized all sensitive keys to environment variables (`JWT_SECRET`) loaded dynamically at runtime. |
+| **Insecure Key Verification** | High | JJWT Library | Older JWT libraries suffered from algorithm confusion (`alg: none`) allowing forged authentication tokens. | Enforced strict HMAC-SHA256 signature validation with `Keys.hmacShaKeyFor()` using a 256-bit secret key in JJWT 0.12.5. |
+| **Container Root Execution** | Medium | Docker Runtime | Running microservices as `root` inside containers increases blast radius during potential container escapes. | Configured `Dockerfile` to create an unprivileged user `appuser:appgroup` (UID 1001) and executed Java under non-root permissions. |
+| **Hardcoded Credentials** | Critical | Source Control | Committing API tokens or secrets in Git enables unauthorized access across environments. | Externalized all secrets to environment variables (`JWT_SECRET`) injected dynamically at runtime via Docker container parameters. |
+| **Vulnerable Dependencies** | High | Maven POM | Outdated dependencies harbor known remote code execution and denial-of-service vulnerabilities. | Migrated to Spring Boot 3.3.4, Java 23, and integrated automated Trivy container and dependency auditing in Stage 4. |
 
 ---
 
-## 4. Pipeline Execution Evidence
+## 4. Environment Access & Verification Links
 
-```text
-================================================================================
-                           JENKINS PIPELINE EXECUTION
-================================================================================
-[Stage 1: Build & Package]   -> SUCCESS (28s) [JAR + Docker tag created]
-[Stage 2: Automated Testing] -> SUCCESS (16s) [JUnit 5 & JaCoCo passed]
-[Stage 3: Code Quality]      -> SUCCESS (14s) [SonarQube analysis complete]
-[Stage 4: Security Scanning] -> SUCCESS (12s) [Trivy & Dependency check passed]
-[Stage 5: Deploy to Staging] -> SUCCESS (15s) [Health probe UP on :8081]
-[Stage 6: Release to Prod]   -> SUCCESS (18s) [Production active on :8080]
-[Stage 7: Monitoring/Alerts] -> SUCCESS (10s) [Prometheus metric verified]
-================================================================================
-OVERALL RESULT: SUCCESS (Total execution: 1m 53s)
-================================================================================
-```
-*(Insert your captured Jenkins UI Stage View screenshot here)*
+* **Jenkins CI/CD Server:** `http://localhost:8085` (Job: `opsnexus-pipeline`)
+* **Production API Swagger UI:** `http://localhost:8080/swagger-ui.html`
+* **Production Health Probe:** `http://localhost:8080/actuator/health`
+* **Production Prometheus Metrics:** `http://localhost:8080/actuator/prometheus`
+* **Staging Health Probe:** `http://localhost:8081/actuator/health`
+* **SonarQube Quality Server:** `http://localhost:9000`
+* **Prometheus Alerting Server:** `http://localhost:9090`
+* **Grafana Telemetry Dashboard:** `http://localhost:3005` (Credentials: `admin` / `admin`)

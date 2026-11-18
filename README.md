@@ -1,71 +1,76 @@
-# TaskFlow API - Enterprise Java DevOps Pipeline
-## 7-Stage End-to-End CI/CD Pipeline with Jenkins, Docker, and Prometheus
+# OpsNexus API - Enterprise Java DevOps CI/CD Pipeline
+## 7-Stage End-to-End Automated CI/CD Pipeline with Jenkins, Docker, Prometheus & Grafana
 
-This project provides an enterprise-ready DevOps implementation for **TaskFlow API**, a Java 17 / Spring Boot 3 REST microservice with automated continuous integration and continuous deployment via Jenkins.
-
----
-
-## Architecture & Tech Stack
-
-* **Language & Framework:** Java 17 LTS, Spring Boot 3.2.3, Spring Security, Spring Boot Actuator
-* **Build Tool:** Apache Maven 3.9
-* **Testing:** JUnit 5 (Jupiter), AssertJ, MockMvc, JaCoCo Code Coverage
-* **Code Quality:** SonarQube Scanner (`sonar-maven-plugin`), Checkstyle rules
-* **Security:** OWASP Dependency Analysis, Trivy container scanner, Secret auditing
-* **Containers & Orchestration:** Docker (Multi-stage build), Docker Compose
-* **Monitoring & Observability:** Micrometer Prometheus exporter (`/actuator/prometheus`), Prometheus server, Grafana
+This repository delivers an enterprise-grade DevOps implementation for **OpsNexus API**, a modern **Java 23 / Spring Boot 3.3.4** REST microservice featuring full continuous integration and continuous deployment via Jenkins.
 
 ---
 
-## The 7 Pipeline Stages
+## Architecture & Technology Stack
 
-1. **Stage 1: Build & Package:** Compiles Java code with Maven, packages the standalone executable JAR, and creates tagged Docker images.
-2. **Stage 2: Automated Testing:** Runs unit and integration test suites, records Surefire JUnit XML reports, and enforces JaCoCo coverage thresholds.
-3. **Stage 3: Code Quality Analysis:** Runs SonarQube static analysis to check code maintainability, technical debt, and duplication.
-4. **Stage 4: Automated Security Scanning:** Performs CVE scanning on third-party Maven dependencies and container base images using Trivy.
-5. **Stage 5: Deploy to Staging:** Deploys containerized staging environment on port `8081` using Docker Compose and executes automated smoke tests.
-6. **Stage 6: Release to Production:** Promotes release to production on port `8080` with resource constraints, health verification, and automated rollback recovery.
-7. **Stage 7: Monitoring & Alerting:** Scrapes JVM and application metrics via Prometheus, checks alert thresholds, and validates incident simulation via `/api/chaos/error`.
-
----
-
-## Local Development & Testing
-
-### Running with Maven
-```bash
-# 1. Compile and package the JAR
-JAVA_HOME=/opt/homebrew/opt/openjdk@17 mvn clean package
-
-# 2. Run automated tests with JaCoCo coverage
-JAVA_HOME=/opt/homebrew/opt/openjdk@17 mvn test
-
-# 3. Launch application locally
-JAVA_HOME=/opt/homebrew/opt/openjdk@17 java -jar target/taskflow-api-1.0.0.jar
-```
-
-### Running with Docker Compose
-```bash
-# Launch Jenkins & SonarQube
-docker compose -f docker-compose.jenkins.yml up -d
-
-# Launch Prometheus & Grafana
-docker compose -f docker-compose.monitoring.yml up -d
-
-# Launch Staging Environment (Port 8081)
-IMAGE_TAG=staging docker compose -f docker-compose.staging.yml up -d
-
-# Launch Production Environment (Port 8080)
-IMAGE_TAG=latest docker compose -f docker-compose.prod.yml up -d
-```
+* **Language & Runtime:** Java 23 (Eclipse Temurin 23)
+* **Framework:** Spring Boot 3.3.4 (Spring Web, Spring Security, Spring Boot Actuator, Springdoc OpenAPI)
+* **API Documentation:** Interactive OpenAPI / Swagger UI at `/swagger-ui.html`
+* **Build System:** Apache Maven 3.9 (Containerized multi-stage Docker build)
+* **Testing:** JUnit 5 (Jupiter), AssertJ, Spring MockMvc, JaCoCo Code Coverage
+* **Code Quality:** SonarQube Scanner (`sonar-project.properties`)
+* **Security & DevSecOps:** Trivy Container Image Scanner, Maven Dependency Tree Auditing, Secret Leakage Detection
+* **Containers & Orchestration:** Docker multi-stage builds, Docker Compose, Linux non-root security (`appuser`)
+* **Observability & Alerting:** Micrometer Prometheus exporter (`/actuator/prometheus`), Prometheus Server (`:9090`), Grafana Dashboard (`:3005`)
+* **Chaos Engineering:** Synthetic failure injection endpoint (`/api/chaos/error`) for alert simulation
 
 ---
 
-## Key Endpoints
+## The 7 Pipeline Stages (Jenkinsfile)
 
-| Resource | URL | Description |
+1. **Stage 1: Build & Package:** Compiles Java 23 code with Maven, runs unit tests, packages standalone executable JAR, and creates tagged Docker images (`opsnexus-api:latest`, `opsnexus-api:v1.0.${BUILD_NUMBER}`).
+2. **Stage 2: Automated Testing:** Executes JUnit 5 test suites (cryptographic security tests, CRUD service tests), produces Surefire XML test reports, and enforces test passing criteria.
+3. **Stage 3: Code Quality Analysis:** Runs SonarQube static analysis to evaluate code maintainability, technical debt, and quality gates.
+4. **Stage 4: Automated Security Scanning:** Performs CVE analysis on container base images and dependencies using Trivy, audits secret exposure, and exports security artifacts.
+5. **Stage 5: Deploy to Staging:** Deploys containerized staging environment on port `8081` and executes automated smoke tests with retry loops.
+6. **Stage 6: Release to Production:** Promotes release to production on port `8080` with automated health verification and automated rollback recovery if failure occurs.
+7. **Stage 7: Monitoring & Alerting:** Scrapes JVM and application metrics via Prometheus, triggers chaos endpoint (`/api/chaos/error?type=500`), and validates alerting rules.
+
+---
+
+## Service Endpoints & Verification
+
+| Service / Tool | URL | Description |
 | :--- | :--- | :--- |
-| **Health Probe** | `http://localhost:8080/actuator/health` | Service liveness and readiness probe |
-| **Prometheus Metrics**| `http://localhost:8080/actuator/prometheus` | JVM & application metrics stream |
-| **User Login** | `POST http://localhost:8080/api/auth/login` | Returns JWT Bearer token |
-| **Task Management** | `GET/POST http://localhost:8080/api/tasks` | Authenticated CRUD endpoints |
-| **Chaos Endpoint** | `GET http://localhost:8080/api/chaos/error` | Incident simulation for alert validation |
+| **Production Swagger UI** | `http://localhost:8080/swagger-ui.html` | Interactive API documentation & test console |
+| **Production Health Probe** | `http://localhost:8080/actuator/health` | Service liveness and readiness probe |
+| **Production Metrics** | `http://localhost:8080/actuator/prometheus` | Live Micrometer Prometheus JVM metric stream |
+| **Staging Health Probe** | `http://localhost:8081/actuator/health` | Isolated pre-production verification endpoint |
+| **Jenkins CI/CD Server** | `http://localhost:8085` | Declarative 7-stage pipeline orchestrator |
+| **SonarQube Quality Server** | `http://localhost:9000` | Code quality, debt, and security scanner |
+| **Prometheus Monitoring** | `http://localhost:9090` | Time-series metrics collection & alert rules |
+| **Grafana Dashboards** | `http://localhost:3005` | JVM performance & traffic visual dashboard (`admin`/`admin`) |
+| **Chaos Failure Injection** | `http://localhost:8080/api/chaos/error` | Synthetic error trigger for alert verification |
+
+---
+
+## Authentication & API Quickstart
+
+### 1. Authenticate (Get JWT Token)
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password123"}'
+```
+
+### 2. Access Protected Task APIs
+```bash
+# Set your token
+TOKEN="<JWT_TOKEN_FROM_STEP_1>"
+
+# List all tasks
+curl -X GET http://localhost:8080/api/tasks \
+  -H "Authorization: Bearer $TOKEN"
+
+# Create a new task
+curl -X POST http://localhost:8080/api/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Deploy Pipeline","description":"Automate 7 stages with Jenkins","status":"COMPLETED"}'
+```
+
+Or open **Swagger UI** at `http://localhost:8080/swagger-ui.html`, click **Authorize** 🔓, and enter `Bearer <your-token>`.

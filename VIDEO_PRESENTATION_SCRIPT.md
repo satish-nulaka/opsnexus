@@ -1,61 +1,71 @@
-# Java DevOps Pipeline Demo Video Presentation Script
-## Target Duration: 7 to 8 Minutes (Maximum: 10 Minutes)
+# OpsNexus DevOps Pipeline Demo Video Presentation Script
+## Target Duration: 7 to 8 Minutes (Strict Maximum: 10 Minutes)
 
-Use this step-by-step presentation outline to record your demo video.
-
----
-
-### Timing Breakdown
-* **0:00 - 1:00:** Introduction, Architecture & Git Repository
-* **1:00 - 2:15:** Jenkins Pipeline Configuration (SCM & Declarative Jenkinsfile)
-* **2:15 - 5:15:** Pipeline Execution across all 7 Stages
-* **5:15 - 6:45:** Staging vs. Production Deployment Verification
-* **6:45 - 8:00:** Prometheus Metrics, Alert Rules & Chaos Incident Simulation
-* **8:00 - 8:30:** Conclusion
+This script provides an exact timestamp-by-timestamp walkthrough for recording your presentation video to demonstrate the completed 7-stage CI/CD pipeline.
 
 ---
 
-### Step 1: Introduction (0:00 - 1:00)
-* **On Screen:** Terminal showing the project directory and the GitHub repository page.
-* **Talking Points:**
-  * Introduce your project: **TaskFlow API**, an enterprise Java 17 and Spring Boot 3 REST microservice.
-  * Highlight the technology stack: Apache Maven, Spring Security with JWT, JUnit 5, Docker, Docker Compose, SonarQube, and Prometheus.
-  * Point out the key project files: `pom.xml`, multi-stage `Dockerfile`, and the declarative `Jenkinsfile`.
+### Presentation Timing Overview
+* **0:00 - 1:00:** Introduction & System Architecture (GitHub repository & project structure)
+* **1:00 - 2:00:** Jenkins Pipeline Configuration (Pipeline script from SCM)
+* **2:00 - 4:45:** Live Jenkins Pipeline Execution (Stages 1 through 7)
+* **4:45 - 6:00:** Staging vs. Production Deployment & Swagger UI Verification
+* **6:00 - 7:15:** Prometheus Metrics, Alert Rules & Chaos Error Simulation
+* **7:15 - 8:00:** Summary & Conclusion
 
-### Step 2: Jenkins Configuration (1:00 - 2:15)
-* **On Screen:** Jenkins UI at `http://localhost:8085`.
-* **Talking Points:**
-  * Navigate to the Pipeline job (`taskflow-pipeline`).
-  * Open **Configure** and show the Pipeline section.
-  * Demonstrate that the pipeline definition uses **Pipeline script from SCM**, pulling the `Jenkinsfile` directly from the Git repository.
+---
 
-### Step 3: 7-Stage Pipeline Run (2:15 - 5:15)
-* **On Screen:** Click **Build Now** and view the Stage View or Blue Ocean console output.
-* **Talking Points:**
-  * **Stage 1 (Build & Package):** Maven compiles the Java code, packages the executable JAR file, and builds a version-tagged Docker image (`taskflow-api:v1.0.X`).
-  * **Stage 2 (Automated Testing):** JUnit 5 executes unit tests (cryptographic functions) and MockMvc integration tests (CRUD lifecycle). Surefire reports are saved, and JaCoCo evaluates coverage.
-  * **Stage 3 (Code Quality):** SonarQube scans the code structure, maintainability, and code smells against defined quality gates.
-  * **Stage 4 (Security Scanning):** Dependency trees and container layers are scanned for CVEs using Trivy, and secrets scanning checks for credential leaks.
-  * **Stage 5 (Deploy to Staging):** Docker Compose deploys the container to staging on port `8081`. An automated script checks `/actuator/health` to confirm the service is UP.
-  * **Stage 6 (Release to Production):** The verified image is promoted to production on port `8080` with resource constraints. Automated smoke tests verify health, with automatic rollback triggered if failures occur.
-  * **Stage 7 (Monitoring & Alerting):** Verifies that Prometheus is scraping `/actuator/prometheus` and validates alerting rules via the chaos endpoint.
+### Step 1: Introduction & Architecture (0:00 - 1:00)
+* **On Screen:** Open the GitHub repository at `https://github.com/satish-nulaka/opsnexus` and show your local project directory.
+* **What to Say:**
+  > *"Hello everyone. Today I am presenting my enterprise DevOps CI/CD pipeline implementation for **OpsNexus API**, a resilient Java 23 and Spring Boot 3.3.4 REST microservice. The solution automates all seven distinct lifecycle stages using Jenkins, Docker multi-stage builds, Trivy security scanning, Prometheus observability, and Grafana dashboards. Here on GitHub, we have our source repository containing the Java application code, pom.xml, multi-stage Dockerfile, and the declarative Jenkinsfile."*
 
-### Step 4: Verification of Deployments (5:15 - 6:45)
-* **On Screen:** Web browser tabs.
-* **Talking Points:**
-  * Open `http://localhost:8081/actuator/health` (Staging) -> show `{"status":"UP"}`.
-  * Open `http://localhost:8080/actuator/health` (Production) -> show `{"status":"UP"}`.
-  * Use curl or Postman to send a POST request to `/api/auth/login` to obtain a JWT token, then fetch tasks from `http://localhost:8080/api/tasks` using the Bearer token.
+---
 
-### Step 5: Monitoring & Chaos Alerting (6:45 - 8:00)
-* **On Screen:** Prometheus (`http://localhost:9090`) and Grafana (`http://localhost:3005`).
-* **Talking Points:**
-  * In Prometheus, search for `jvm_memory_used_bytes` or `taskflow_task_operations_total` to show live metrics.
-  * Navigate to **Alerts** in Prometheus to show the `HighErrorRate` and `ServiceDown` rules.
-  * Trigger an incident by navigating to `http://localhost:8080/api/chaos/error?type=500`.
-  * Return to Prometheus to show how the error rate metric increases and triggers the alerting rule.
+### Step 2: Jenkins Pipeline Setup (1:00 - 2:00)
+* **On Screen:** Jenkins UI at `http://localhost:8085`. Navigate to the `opsnexus-pipeline` job and click **Configure**.
+* **What to Say:**
+  > *"Here on our local Jenkins server running on port 8085, we have configured our pipeline job named `opsnexus-pipeline`. Under the Pipeline definition section, you can see it is configured with **Pipeline script from SCM**, pointing directly to our Git repository on GitHub on branch `main`. This ensures complete GitOps traceability: every pipeline execution is version-controlled and immutable."*
 
-### Step 6: Conclusion (8:00 - 8:30)
-* **On Screen:** Jenkins Stage View with all 7 stages completed in green.
-* **Talking Points:**
-  * Summarize the end-to-end automation: code compilation, multi-layer testing, quality gating, security analysis, staging validation, resilient production release, and live observability.
+---
+
+### Step 3: Live 7-Stage Pipeline Execution (2:00 - 4:45)
+* **On Screen:** Click **Build Now** in Jenkins and click on the running build to show the Stage View / Console Output.
+* **What to Say as each stage executes:**
+  * **Stage 1 (Build & Package):** *"Stage 1 uses a multi-stage Docker build with Eclipse Temurin 23 and Maven 3.9 to compile our Java 23 code, run unit tests, and package our standalone JAR artifact into a secured container image tagged with the build number."*
+  * **Stage 2 (Automated Testing):** *"Stage 2 executes our JUnit 5 unit and integration test suite, validating our cryptographic JWT token service and CRUD controllers, producing Surefire test reports."*
+  * **Stage 3 (Code Quality Analysis):** *"Stage 3 triggers our SonarQube quality gate analysis, inspecting cyclomatic complexity, code smells, and technical debt against defined standards."*
+  * **Stage 4 (Security Scanning):** *"Stage 4 runs our DevSecOps security audit using Trivy to scan the container base layers and Maven dependency tree for CVEs, as well as checking for any exposed secrets in the codebase."*
+  * **Stage 5 (Deploy to Staging):** *"Stage 5 deploys the container to our Staging environment on port 8081 and executes our automated smoke test script, verifying that the Spring Boot health probe reports UP."*
+  * **Stage 6 (Release to Production):** *"Stage 6 promotes our verified artifact to Production on port 8080 with automated health verification and automated rollback recovery if failure occurs."*
+  * **Stage 7 (Monitoring & Alerting):** *"Stage 7 confirms our Prometheus metrics stream is active and triggers our chaos endpoint to validate error alerting."*
+  * *"As you can see, all seven stages have completed with green success status!"*
+
+---
+
+### Step 4: Staging & Production Deployment Verification (4:45 - 6:00)
+* **On Screen:** Open browser tabs for Staging and Production endpoints.
+* **What to Show & Say:**
+  1. **Staging Health:** Open `http://localhost:8081/actuator/health`.
+     > *"Here on port 8081, our staging environment is actively running and returning health status UP."*
+  2. **Production Swagger UI:** Open `http://localhost:8080/swagger-ui.html`.
+     > *"Here on port 8080, our production environment is running with interactive Swagger UI. Let's authenticate using `POST /api/auth/login` with username `admin` and password `password123`. We obtain our JWT bearer token, click Authorize in Swagger UI, and execute `GET /api/tasks` and `POST /api/tasks` to demonstrate full authenticated CRUD functionality."*
+
+---
+
+### Step 5: Observability & Chaos Incident Simulation (6:00 - 7:15)
+* **On Screen:** Prometheus at `http://localhost:9090` and Grafana at `http://localhost:3005`.
+* **What to Show & Say:**
+  1. **Prometheus Targets:** In Prometheus, open **Status -> Targets**.
+     > *"In Prometheus, we can see both our staging and production targets are marked UP, actively scraping JVM and HTTP telemetry."*
+  2. **Alert Rules:** Open **Alerts** tab in Prometheus.
+     > *"Under Alerts, we have configured `ServiceDown` and `HighErrorRate` rules to safeguard our microservice."*
+  3. **Chaos Simulation:** Open a browser tab or run curl to hit `http://localhost:8080/api/chaos/error?type=500`.
+     > *"Let's simulate a production incident by triggering our chaos endpoint on port 8080. Returning to Prometheus and Grafana, we can immediately observe the HTTP 500 error count and rate spike, proving our real-time monitoring and alerting pipeline."*
+
+---
+
+### Step 6: Summary & Conclusion (7:15 - 8:00)
+* **On Screen:** Return to Jenkins showing the all-green 7-Stage pipeline view.
+* **What to Say:**
+  > *"To summarize: we have built a complete, enterprise-grade CI/CD pipeline covering build automation, automated testing, quality gates, security vulnerability scanning, staging validation, resilient production deployment with rollback, and live Prometheus observability. Thank you for watching."*
