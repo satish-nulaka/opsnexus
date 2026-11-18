@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  taskflow-staging:
+  opsnexus-staging:
     image: ${IMAGE_NAME:-opsnexus-api}:${IMAGE_TAG:-staging}
-    container_name: taskflow-staging-app
+    container_name: opsnexus-staging-app
     restart: unless-stopped
     ports:
       - "8081:8080"
@@ -22,4 +22,5 @@ services:
 
 networks:
   taskflow-network:
+    name: taskflow-network
     driver: bridge

@@ -112,10 +112,13 @@ pipeline {
                 echo "=========================================================="
                 
                 sh """
+                    DOCKER_NET=\$(docker network ls --format '{{.Name}}' | grep taskflow-network | head -n 1 || echo "")
+                    NET_FLAG=\$( [ -n "\$DOCKER_NET" ] && echo "--network \$DOCKER_NET" || echo "" )
+                    
                     docker rm -f opsnexus-staging-app || true
                     docker run -d \
                         --name opsnexus-staging-app \
-                        --network sit753-devops-pipeline_taskflow-network \
+                        \${NET_FLAG} \
                         -p ${STAGING_PORT}:8080 \
                         -e PORT=8080 \
                         -e SPRING_PROFILES_ACTIVE=staging \
@@ -143,10 +146,13 @@ pipeline {
                         sh "docker tag ${APP_NAME}:${BUILD_TAG} ${APP_NAME}:production-latest"
                         
                         sh """
+                            DOCKER_NET=\$(docker network ls --format '{{.Name}}' | grep taskflow-network | head -n 1 || echo "")
+                            NET_FLAG=\$( [ -n "\$DOCKER_NET" ] && echo "--network \$DOCKER_NET" || echo "" )
+                            
                             docker rm -f opsnexus-prod-app || true
                             docker run -d \
                                 --name opsnexus-prod-app \
-                                --network sit753-devops-pipeline_taskflow-network \
+                                \${NET_FLAG} \
                                 -p ${PROD_PORT}:8080 \
                                 -e PORT=8080 \
                                 -e SPRING_PROFILES_ACTIVE=prod \
@@ -161,10 +167,13 @@ pipeline {
                     } catch (Exception e) {
                         echo "CRITICAL: Production smoke test failed! Triggering automatic rollback..."
                         sh """
+                            DOCKER_NET=\$(docker network ls --format '{{.Name}}' | grep taskflow-network | head -n 1 || echo "")
+                            NET_FLAG=\$( [ -n "\$DOCKER_NET" ] && echo "--network \$DOCKER_NET" || echo "" )
+                            
                             docker rm -f opsnexus-prod-app || true
                             docker run -d \
                                 --name opsnexus-prod-app \
-                                --network sit753-devops-pipeline_taskflow-network \
+                                \${NET_FLAG} \
                                 -p ${PROD_PORT}:8080 \
                                 -e PORT=8080 \
                                 -e SPRING_PROFILES_ACTIVE=prod \

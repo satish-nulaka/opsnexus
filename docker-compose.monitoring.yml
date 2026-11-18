@@ -34,4 +34,5 @@ services:
 
 networks:
   taskflow-network:
+    name: taskflow-network
     driver: bridge

@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  taskflow-production:
+  opsnexus-production:
     image: ${IMAGE_NAME:-opsnexus-api}:${IMAGE_TAG:-latest}
-    container_name: taskflow-prod-app
+    container_name: opsnexus-prod-app
     restart: always
     ports:
       - "8080:8080"
@@ -30,4 +30,5 @@ services:
 
 networks:
   taskflow-network:
+    name: taskflow-network
     driver: bridge
