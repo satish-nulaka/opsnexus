@@ -8,6 +8,9 @@ COPY pom.xml ./
 RUN mvn dependency:go-offline -B || true
 
 COPY src/ ./src/
+# Run automated tests during container build
+RUN mvn test -B
+# Package executable JAR
 RUN mvn clean package -DskipTests=true -B
 
 # Stage 2: Minimal, secure JRE 23 Production Image
