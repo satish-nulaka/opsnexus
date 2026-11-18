@@ -1,5 +1,8 @@
-package com.deakin.taskflow.controller;
+package com.deakin.opsnexus.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,10 +13,14 @@ import java.time.Instant;
 import java.util.Map;
 
 @RestController
+@Tag(name = "DevOps Chaos & Reliability", description = "Endpoints for simulating incidents to validate Prometheus & Grafana alerting")
 public class ChaosController {
 
     @GetMapping("/api/chaos/error")
-    public ResponseEntity<Map<String, Object>> simulateIncident(@RequestParam(defaultValue = "500") String type) {
+    @Operation(summary = "Simulate application incident", description = "Intentionally triggers a 500 error or latency spike to test alert triggers in Stage 7 of the Jenkins pipeline.")
+    public ResponseEntity<Map<String, Object>> simulateIncident(
+            @Parameter(description = "Chaos type ('500' or 'latency')", example = "500")
+            @RequestParam(defaultValue = "500") String type) {
         if ("500".equals(type)) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "status", "error",
@@ -39,11 +46,15 @@ public class ChaosController {
     }
 
     @GetMapping("/")
+    @Operation(summary = "Root API Service Discovery", description = "Provides navigation links to Swagger UI, Health Probes, and Prometheus metrics.")
     public ResponseEntity<Map<String, Object>> rootDiscovery() {
         return ResponseEntity.ok(Map.of(
-                "service", "TaskFlow REST API (Java Spring Boot)",
+                "service", "OpsNexus Enterprise Workflow API",
+                "version", "1.0.0",
                 "status", "online",
-                "endpoints", Map.of(
+                "documentation", Map.of(
+                        "swaggerUI", "/swagger-ui.html",
+                        "openApiSpec", "/v3/api-docs",
                         "health", "/actuator/health",
                         "metrics", "/actuator/prometheus",
                         "auth", "/api/auth/login",

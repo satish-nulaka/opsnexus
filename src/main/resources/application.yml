@@ -3,7 +3,21 @@ server:
 
 spring:
   application:
-    name: taskflow-api
+    name: opsnexus-api
+
+# OpenAPI 3 / Swagger UI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    persist-authorization: true
+    display-request-duration: true
+  show-actuator: true
 
 # Spring Boot Actuator Configuration for DevOps Monitoring
 management:
@@ -26,5 +40,5 @@ management:
 # Application Security Configuration
 app:
   jwt:
-    secret: ${JWT_SECRET:sit753devopspipelinesupersecretkeythatislongerthan256bitsforhs256validation2026}
+    secret: ${JWT_SECRET:opsnexusdevopspipelinesupersecretkeythatislongerthan256bitsforhs256validation2026}
     expiration-ms: 86400000 # 24 hours

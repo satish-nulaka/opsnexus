@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   taskflow-staging:
-    image: ${IMAGE_NAME:-taskflow-api}:${IMAGE_TAG:-staging}
+    image: ${IMAGE_NAME:-opsnexus-api}:${IMAGE_TAG:-staging}
     container_name: taskflow-staging-app
     restart: unless-stopped
     ports:

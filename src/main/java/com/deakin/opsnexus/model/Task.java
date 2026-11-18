@@ -1,25 +1,39 @@
-package com.deakin.taskflow.model;
+package com.deakin.opsnexus.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
+@Schema(description = "OpsNexus Task Entity representing a workflow unit")
 public class Task {
 
+    @Schema(description = "Unique identifier of the task", example = "task-1")
     private String id;
 
+    @Schema(description = "Title of the task", example = "Automate Jenkins CI/CD Pipeline", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Title cannot be blank")
     @Size(min = 3, max = 100, message = "Title must be between 3 and 100 characters")
     private String title;
 
+    @Schema(description = "Detailed task description", example = "Implement all 7 automated delivery stages", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Description cannot be blank")
     @Size(max = 500, message = "Description cannot exceed 500 characters")
     private String description;
 
+    @Schema(description = "Current lifecycle status", example = "in-progress", allowableValues = {"pending", "in-progress", "completed"})
     private String status;
+
+    @Schema(description = "Urgency priority level", example = "high", allowableValues = {"low", "medium", "high", "critical"})
     private String priority;
+
+    @Schema(description = "Username of assigned owner", example = "devops_lead")
     private String assignedTo;
+
+    @Schema(description = "Task creation timestamp in ISO-8601 format", example = "2026-11-17T12:00:00Z")
     private Instant createdAt;
+
+    @Schema(description = "Last update timestamp in ISO-8601 format", example = "2026-11-17T12:30:00Z")
     private Instant updatedAt;
 
     public Task() {

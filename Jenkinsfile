@@ -3,11 +3,11 @@ pipeline {
 
     tools {
         maven 'Maven 3.9'
-        jdk 'JDK 17'
+        jdk 'JDK 23'
     }
 
     environment {
-        APP_NAME = 'taskflow-api'
+        APP_NAME = 'opsnexus-api'
         BUILD_TAG = "v1.0.${env.BUILD_NUMBER}"
         STAGING_PORT = '8081'
         PROD_PORT = '8080'

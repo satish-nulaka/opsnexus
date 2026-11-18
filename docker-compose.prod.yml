@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   taskflow-production:
-    image: ${IMAGE_NAME:-taskflow-api}:${IMAGE_TAG:-latest}
+    image: ${IMAGE_NAME:-opsnexus-api}:${IMAGE_TAG:-latest}
     container_name: taskflow-prod-app
     restart: always
     ports:

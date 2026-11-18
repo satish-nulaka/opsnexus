@@ -1,10 +1,23 @@
-package com.deakin.taskflow.model;
+package com.deakin.opsnexus.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Authentication Response Payload")
 public class AuthResponse {
+
+    @Schema(description = "Operation success flag", example = "true")
     private boolean success;
+
+    @Schema(description = "Informative status message", example = "Authentication successful")
     private String message;
+
+    @Schema(description = "JWT Bearer token for accessing protected endpoints", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
     private String token;
+
+    @Schema(description = "Authenticated username", example = "devops_lead")
     private String username;
+
+    @Schema(description = "Assigned user role", example = "admin")
     private String role;
 
     public AuthResponse() {}

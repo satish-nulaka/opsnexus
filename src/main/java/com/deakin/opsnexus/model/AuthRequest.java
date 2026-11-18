@@ -1,13 +1,19 @@
-package com.deakin.taskflow.model;
+package com.deakin.opsnexus.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
+@Schema(description = "Authentication Request Payload")
 public class AuthRequest {
+
+    @Schema(description = "Username or Email address", example = "devops_lead", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Username is required")
     private String username;
 
+    @Schema(description = "User email address (for registration)", example = "devops@deakin.edu.au")
     private String email;
 
+    @Schema(description = "Secret password", example = "DevOpsPass123!", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Password is required")
     private String password;
 

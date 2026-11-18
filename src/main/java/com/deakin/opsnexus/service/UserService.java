@@ -1,6 +1,6 @@
-package com.deakin.taskflow.service;
+package com.deakin.opsnexus.service;
 
-import com.deakin.taskflow.model.User;
+import com.deakin.opsnexus.model.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 

@@ -1,6 +1,6 @@
-package com.deakin.taskflow.unit;
+package com.deakin.opsnexus.unit;
 
-import com.deakin.taskflow.security.JwtTokenProvider;
+import com.deakin.opsnexus.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -14,7 +14,7 @@ public class AuthSecurityTest {
 
     @BeforeEach
     void setUp() {
-        String testSecret = "sit753devopspipelinesupersecretkeythatislongerthan256bitsforhs256validation2026";
+        String testSecret = "opsnexusdevopspipelinesupersecretkeythatislongerthan256bitsforhs256validation2026";
         jwtTokenProvider = new JwtTokenProvider(testSecret, 3600000);
         passwordEncoder = new BCryptPasswordEncoder();
     }

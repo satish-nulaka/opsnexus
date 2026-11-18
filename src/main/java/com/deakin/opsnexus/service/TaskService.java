@@ -1,6 +1,6 @@
-package com.deakin.taskflow.service;
+package com.deakin.opsnexus.service;
 
-import com.deakin.taskflow.model.Task;
+import com.deakin.opsnexus.model.Task;
 import io.micrometer.core.instrument.Counter;
 import org.springframework.stereotype.Service;
 

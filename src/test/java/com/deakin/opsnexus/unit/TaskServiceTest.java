@@ -1,7 +1,7 @@
-package com.deakin.taskflow.unit;
+package com.deakin.opsnexus.unit;
 
-import com.deakin.taskflow.model.Task;
-import com.deakin.taskflow.service.TaskService;
+import com.deakin.opsnexus.model.Task;
+import com.deakin.opsnexus.service.TaskService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

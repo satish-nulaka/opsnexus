@@ -1,4 +1,4 @@
-package com.deakin.taskflow.security;
+package com.deakin.opsnexus.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

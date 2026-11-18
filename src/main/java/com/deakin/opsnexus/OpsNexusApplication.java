@@ -1,12 +1,12 @@
-package com.deakin.taskflow;
+package com.deakin.opsnexus;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class TaskflowApplication {
+public class OpsNexusApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(TaskflowApplication.class, args);
+        SpringApplication.run(OpsNexusApplication.class, args);
     }
 }
